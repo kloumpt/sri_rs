@@ -1,0 +1,20 @@
+[package]
+name = "sri_rs"
+version = "0.1.0"
+authors = ["kloumpt <serge.molina+git@kloumpt.net>"]
+
+[[bin]]
+name = "indexing"
+path = "src/indexing.rs"
+
+[[bin]]
+name = "querying"
+path = "src/querying.rs"
+
+[dependencies]
+java-properties = "0.1.0"
+byteorder = "0.4"
+xml-rs = "0.3"
+stemmer = "0.3.2"
+regex = "0.1"
+time = "0.1.34"
