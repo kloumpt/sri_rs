@@ -12,6 +12,7 @@ use std::cell::RefCell;
 
 
 use std::io::BufReader;
+use std::fs;
 use std::fs::File;
 
 
@@ -30,17 +31,21 @@ fn main() {
 
 
 	println!("Loading config...");
-	match config_filename{
-		Some(filename)=> match File::open(&filename){
-			Ok(config_file)=>{
-				match PropertiesIter::new(BufReader::new(config_file)).read_into(|k, v| { context.borrow_mut().set_param(k, v); }){
-					Ok(_)=>println!("Config loaded!"),
-					Err(_)=> panic!("Eror while loading config!")
-				}
-			},
-			Err(_)=> panic!("Error, could not open config file '{}'", filename)
+	match config_filename {
+		Some(filename) => {
+			match File::open(&filename) {
+				Ok(config_file) => {
+					match PropertiesIter::new(BufReader::new(config_file)).read_into(|k, v| {
+						context.borrow_mut().set_param(k, v);
+					}) {
+						Ok(_) => println!("Config loaded!"),
+						Err(_) => panic!("Eror while loading config!"),
+					}
+				},
+				Err(_) => panic!("Error, could not open config file '{}'", filename),
+			}
 		},
-		None=> panic!("No config file!")
+		None => panic!("No config file!"),
 	}
 
 	context.borrow_mut().complete_config();
@@ -48,21 +53,26 @@ fn main() {
 
 
 	println!("Config: ");
-	for (property, value) in context.borrow_mut().get_config(){
+	for (property, value) in context.borrow_mut().get_config() {
 		println!("{}=>{}", property, value);
 	}
 	println!("");
 
 
 	println!("Indexing documents...");
-	match documents_list_filename{
-		Some(filename)=>context.borrow_mut().start_indexing(&filename),
-		None=> panic!("No documents list provided!")
+	match documents_list_filename {
+		Some(filename) => context.borrow_mut().start_indexing(&filename),
+		None => panic!("No documents list provided!"),
 	}
 	println!("Indexing finished!");
 	println!("");
 
 	println!("Saving index to disk...");
+	match context.borrow().get_param("index") {
+		Some(index_path) => fs::create_dir_all(index_path).unwrap_or_else(|e| panic!(e) ),
+		None => panic!("Can't find parameter 'images_associations_filename' in config"),
+	};
+
 	context.borrow().save_index();
 	println!("Index saved!");
 	println!("");

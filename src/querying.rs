@@ -13,11 +13,11 @@ use std::cell::RefCell;
 
 
 use std::io::BufReader;
-use std::io::BufRead;
-use std::fs::File;
 use std::fmt::Write;
+use std::fs::File;
+use std::fs;
+use std::path::Path;
 use std::process::Stdio;
-use std::process::ChildStdout;
 use std::os::unix::io::FromRawFd;
 use std::os::unix::io::AsRawFd;
 
@@ -28,7 +28,40 @@ use includes::context_types::ContextObject;
 use std::process::Command;
 
 
+fn sort_results(result_filename: &str, result_limit: usize) {
 
+	let mut awk_script = String::new();
+	awk_script.push_str("BEGIN { first=true; MAX_RESULTS=");
+	write!(awk_script, "{}", result_limit).unwrap();
+	awk_script.push_str(";}{ if(first || $1!=last_query){first=false; occurence=0; last_query=$1;} occurence += 1; if(occurence<MAX_RESULTS){$4=occurence; print $0;}}");
+
+	let sort_command = Command::new("sort")
+		                   .env("LC_ALL", "C")
+		                   .arg("-k1,1n")
+		                   .arg("-k5,5nr")
+		                   .arg(&result_filename)
+		                   .stdout(Stdio::piped())
+		                   .spawn()
+		                   .unwrap();
+
+
+
+	let awk_command = Command::new("awk")
+		                  .arg(awk_script)
+		                  .stdin(unsafe { Stdio::from_raw_fd(sort_command.stdout.unwrap().as_raw_fd()) })
+		                  .output()
+		                  .unwrap_or_else(|e| panic!("failed to execute process: {}", e));
+
+	match File::create(Path::new(result_filename)) {
+		Ok(mut file) => {
+			use std::io::Write;
+			writeln!(file, "{}", &String::from_utf8_lossy(&awk_command.stdout)).unwrap()
+		},
+		Err(e) => panic!(e),
+	}
+
+
+}
 
 
 
@@ -39,17 +72,21 @@ fn main() {
 
 
 	println!("Loading config...");
-	match config_filename{
-		Some(filename)=> match File::open(&filename){
-			Ok(config_file)=>{
-				match PropertiesIter::new(BufReader::new(config_file)).read_into(|k, v| { context.borrow_mut().set_param(k, v); }){
-					Ok(_)=>println!("Config loaded!"),
-					Err(_)=> panic!("Eror while loading config!")
-				}
-			},
-			Err(_)=> panic!("Error, could not open config file '{}'", filename)
+	match config_filename {
+		Some(filename) => {
+			match File::open(&filename) {
+				Ok(config_file) => {
+					match PropertiesIter::new(BufReader::new(config_file)).read_into(|k, v| {
+						context.borrow_mut().set_param(k, v);
+					}) {
+						Ok(_) => println!("Config loaded!"),
+						Err(_) => panic!("Eror while loading config!"),
+					}
+				},
+				Err(_) => panic!("Error, could not open config file '{}'", filename),
+			}
 		},
-		None=> panic!("No config file!")
+		None => panic!("No config file!"),
 	}
 
 	context.borrow_mut().complete_config();
@@ -57,7 +94,7 @@ fn main() {
 
 
 	println!("Config: ");
-	for (property, value) in context.borrow_mut().get_config(){
+	for (property, value) in context.borrow_mut().get_config() {
 		println!("{}=>{}", property, value);
 	}
 	println!("");
@@ -70,37 +107,19 @@ fn main() {
 	context.borrow().index_details(false);
 
 	println!("Starting querying...");
+	let result_folder = "results";
+	fs::create_dir_all(result_folder).unwrap_or_else(|e| {
+		panic!(e);
+	});
+
 	let mut result_filename = String::new();
-	write!(&mut result_filename, "results/{}.res", includes::get_time_millis());
-	match queries_list_filename{
-		Some(queries_list_filename)=>context.borrow_mut().start_querying(&queries_list_filename, &result_filename),
-		None=> panic!("No query file provided!")
-	}
-	unsafe{
-
-		let mut awk_command = String::new();
-		awk_command.push_str("BEGIN { first=true; MAX_RESULTS=");
-		write!(awk_command, "{}", 10);
-		awk_command.push_str(";}{ if(first || $1!=last_query){first=false; occurence=0; last_query=$1;} occurence += 1; if(occurence<MAX_RESULTS){$4=occurence; print $0;}}");
-
-		let cmd = Command::new("sort").arg("-k1,1n").arg("-k5,5nr").arg(&result_filename)
-		.stdout(Stdio::piped())
-		.spawn().unwrap();
-
-
-
-		let cmd2 = Command::new("awk")
-		.arg(awk_command)
-		.stdin(Stdio::from_raw_fd(cmd.stdout.unwrap().as_raw_fd()))
-		.output()
-		.unwrap_or_else(|e| { panic!("failed to execute process: {}", e) });
-		println!("");
-
-		println!("{}", String::from_utf8_lossy(&cmd2.stdout));
-		print!("\n");
-
-		println!("{}", String::from_utf8_lossy(&cmd2.stderr));
-		print!("\n");
+	write!(&mut result_filename, "{}/{}.res", result_folder, includes::get_time_millis()).unwrap();
+	match queries_list_filename {
+		Some(queries_list_filename) => context.borrow_mut().start_querying(&queries_list_filename, &result_filename),
+		None => panic!("No query file provided!"),
 	}
 
+
+	println!("{}", result_filename);
+	sort_results(&result_filename, 10);
 }

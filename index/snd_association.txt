@@ -1,4 +1,0 @@
-snd15=/home/serge/Travail/UPSSITECH/PFR/git/sprint3/data/Sons/Corpus/corpus_m6_LE.bin
-snd16=/home/serge/Travail/UPSSITECH/PFR/git/sprint3/data/Sons/Requete/jingle_m6.bin
-snd14=/home/serge/Travail/UPSSITECH/PFR/git/sprint3/data/Sons/Corpus/corpus_m6.bin
-snd17=/home/serge/Travail/UPSSITECH/PFR/git/sprint3/data/Sons/Requete/jingle_m6_LE.bin
