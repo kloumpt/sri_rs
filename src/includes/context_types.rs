@@ -7,7 +7,7 @@ use std::io::BufReader;
 use std::io::BufRead;
 use std::io::Write;
 use std::fs::File;
-
+use std::cmp;
 
 use includes::image_types::ImageDescriptor;
 use includes::sound_types::SoundDescriptor;
@@ -158,6 +158,12 @@ impl ContextObject {
 					let id = fields.next().unwrap();
 					let filename = fields.next().unwrap();
 					self.add_image_association(String::from(id), String::from(filename));
+
+					let string_number: String = id.chars().skip(3).collect();
+					match string_number.parse::<u64>() {
+						Ok(value) => self.max_doc_id = cmp::max(self.max_doc_id, value + 1),
+						Err(_) => println!("Warning: wrong id for image association '{}' in saved index", association),
+					}
 				},
 				Err(e) => panic!(e),
 			}
@@ -211,6 +217,12 @@ impl ContextObject {
 					let id = fields.next().unwrap();
 					let filename = fields.next().unwrap();
 					self.add_sound_association(String::from(id), String::from(filename));
+
+					let string_number: String = id.chars().skip(3).collect();
+					match string_number.parse::<u64>() {
+						Ok(value) => self.max_doc_id = cmp::max(self.max_doc_id, value + 1),
+						Err(_) => println!("Warning: wrong id for sound association '{}' in saved index", association),
+					}
 				},
 				Err(e) => panic!(e),
 			}
@@ -276,6 +288,13 @@ impl ContextObject {
 					let id = fields.next().unwrap();
 					let filename = fields.next().unwrap();
 					self.add_text_association(String::from(id), String::from(filename));
+
+
+					let string_number: String = id.chars().skip(3).collect();
+					match string_number.parse::<u64>() {
+						Ok(value) => self.max_doc_id = cmp::max(self.max_doc_id, value + 1),
+						Err(_) => println!("Warning: wrong id for text association '{}' in saved index", association),
+					}
 				},
 				Err(e) => panic!(e),
 			}

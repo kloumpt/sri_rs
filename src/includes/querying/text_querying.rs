@@ -10,7 +10,7 @@ use super::super::context_types::ContextObject;
 static STOP_WORDS: &'static [&'static str] = &["au", "aux", "avec", "ce", "ces", "dans", "de", "des", "du", "elle", "en", "et", "eux", "il", "je", "la", "le", "leur", "lui", "ma", "mais", "me", "même", "mes", "moi", "mon", "ne", "nos", "notre", "nous", "on", "ou", "par", "pas", "pour", "qu", "que", "qui", "sa", "se", "ses", "son", "sur", "ta", "te", "tes", "toi", "ton", "tu", "un", "une", "vos", "votre", "vous", "c", "d", "j", "l", "à", "m", "n", "s", "t", "y", "été", "étée", "étées", "étés", "étant", "suis", "es", "est", "sommes", "êtes", "sont", "serai", "seras", "sera", "serons", "serez", "seront", "serais", "serait", "serions", "seriez", "seraient", "étais", "était", "étions", "étiez", "étaient", "fus", "fut", "fûmes", "fûtes", "furent", "sois", "soit", "soyons", "soyez", "soient", "fusse", "fusses", "fût", "fussions", "fussiez", "fussent", "ayant", "eu", "eue", "eues", "eus", "ai", "as", "avons", "avez", "ont", "aurai", "auras", "aura", "aurons", "aurez", "auront", "aurais", "aurait", "aurions", "auriez", "auraient", "avais", "avait", "avions", "aviez", "avaient", "eut", "eûmes", "eûtes", "eurent", "aie", "aies", "ait", "ayons", "ayez", "aient", "eusse", "eusses", "eût", "eussions", "eussiez", "eussent", "ceci", "cela", "celà", "cet", "cette", "ici", "ils", "les", "leurs", "quel", "quels", "quelle", "quelles", "sans", "soi"];
 
 impl TextDescriptor {
-	pub fn from_criterions(context: &mut ContextObject, criterion_as_str: &str) -> Result<TextDescriptor, String> {
+	pub fn from_criteria(context: &mut ContextObject, criteria_as_str: &str) -> Result<TextDescriptor, String> {
 		let mut stemmer = Stemmer::new("french").unwrap();
 
 		let mut occurences: HashMap<String, i32> = HashMap::new();
@@ -21,7 +21,7 @@ impl TextDescriptor {
 
 
 
-		for word in clean_string_keep_criterions(criterion_as_str.to_lowercase()).split_whitespace() {
+		for word in clean_string_keep_criteria(criteria_as_str.to_lowercase()).split_whitespace() {
 			let mut word = String::from(word);
 			let weight = match word.chars().next().unwrap() {
 				'+' => {
@@ -76,7 +76,7 @@ impl TextDescriptor {
 }
 
 
-fn clean_string_keep_criterions(value: String) -> String {
+fn clean_string_keep_criteria(value: String) -> String {
 	value.replace(".", " ")
 	     .replace(",", " ")
 	     .replace("/", " ")

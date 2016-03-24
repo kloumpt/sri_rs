@@ -3,11 +3,13 @@ extern crate byteorder;
 extern crate xml;
 extern crate stemmer;
 extern crate regex;
+extern crate image;
+extern crate hound;
+extern crate simplemad;
 
 pub mod includes;
 
 use std::env;
-
 use std::cell::RefCell;
 
 
@@ -58,6 +60,9 @@ fn main() {
 	}
 	println!("");
 
+	println!("Loading index...");
+	context.borrow_mut().load_index();
+	println!("");
 
 	println!("Indexing documents...");
 	match documents_list_filename {
@@ -69,7 +74,7 @@ fn main() {
 
 	println!("Saving index to disk...");
 	match context.borrow().get_param("index") {
-		Some(index_path) => fs::create_dir_all(index_path).unwrap_or_else(|e| panic!(e) ),
+		Some(index_path) => fs::create_dir_all(index_path).unwrap_or_else(|e| panic!(e)),
 		None => panic!("Can't find parameter 'images_associations_filename' in config"),
 	};
 

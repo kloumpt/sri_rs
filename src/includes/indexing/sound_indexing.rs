@@ -4,12 +4,136 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::SeekFrom;
 use byteorder::{BigEndian, LittleEndian, ReadBytesExt};
+use simplemad::Decoder;
+use hound;
 
 use includes::sound_types::*;
 use super::super::context_types::ContextObject;
 
 impl SoundDescriptor {
-	pub fn from_sound_file(context: &mut ContextObject, image_file: File) -> Result<SoundDescriptor, String> {
+	pub fn from_mp3_file(context: &mut ContextObject, sound_file: File) -> Result<SoundDescriptor, String> {
+		let histograms_size;
+		let histograms_levels;
+
+		let mut current_level;
+		let mut position_in_window = 0;
+		let mut window = 0;
+		let mut histograms: Vec<Vec<i32>> = Vec::new();
+
+		match context.get_param("window_size") {
+			Some(value) => {
+				match value.parse::<usize>() {
+					Ok(i) => histograms_size = i,
+					Err(e) => return Err(String::from(format!("Invalid value for parameter window_size ({})", e))),
+				}
+			},
+			None => panic!("Can't find parameter 'window_size' in config"),
+		}
+		match context.get_param("window_levels") {
+			Some(value) => {
+				match value.parse::<usize>() {
+					Ok(i) => histograms_levels = i,
+					Err(e) => return Err(String::from(format!("Invalid value for parameter histograms_levels ({})", e))),
+				}
+			},
+			None => panic!("Can't find parameter 'window_levels' in config"),
+		}
+
+		let decoder = Decoder::decode(sound_file).unwrap();
+
+		for decoding_result in decoder {
+			match decoding_result {
+				Err(e) => println!("Error: {:?}", e),
+				Ok(frame) => {
+					for sample in &(&frame.samples)[0] {
+						if position_in_window == 0 {
+							histograms.insert(window, Vec::new());
+							histograms[window].resize(histograms_levels, 0);
+						}
+
+
+						let current_value = sample.to_f64() * 0.5 + 0.5;
+						current_level = current_value * (histograms_levels as f64);
+
+						histograms[window][current_level as usize] += 1;
+
+						position_in_window += 1;
+
+						if position_in_window >= histograms_size {
+							window += 1;
+							position_in_window = 0;
+						}
+					}
+				},
+			}
+		}
+
+
+
+		Ok(SoundDescriptor::from_histogram(context.gen_id(String::from("snd")), histograms_size, histograms_levels, histograms))
+	}
+
+
+	pub fn from_wav_file(context: &mut ContextObject, sound_file: File) -> Result<SoundDescriptor, String> {
+		let histograms_size;
+		let histograms_levels;
+
+		let mut current_level;
+		let mut position_in_window = 0;
+		let mut window = 0;
+		let mut histograms: Vec<Vec<i32>> = Vec::new();
+
+		match context.get_param("window_size") {
+			Some(value) => {
+				match value.parse::<usize>() {
+					Ok(i) => histograms_size = i,
+					Err(e) => return Err(String::from(format!("Invalid value for parameter window_size ({})", e))),
+				}
+			},
+			None => panic!("Can't find parameter 'window_size' in config"),
+		}
+		match context.get_param("window_levels") {
+			Some(value) => {
+				match value.parse::<usize>() {
+					Ok(i) => histograms_levels = i,
+					Err(e) => return Err(String::from(format!("Invalid value for parameter histograms_levels ({})", e))),
+				}
+			},
+			None => panic!("Can't find parameter 'window_levels' in config"),
+		}
+		let mut reader = hound::WavReader::new(sound_file).unwrap();
+		for sample in reader.samples::<i16>() {
+			match sample {
+				Err(e) => println!("Error: {:?}", e),
+				Ok(sample) => {
+					if position_in_window == 0 {
+						histograms.insert(window, Vec::new());
+						histograms[window].resize(histograms_levels, 0);
+					}
+
+					let current_value = sample as f64 / 2f64.powi(16) + 0.5;
+					current_level = current_value * (histograms_levels as f64);
+
+					histograms[window][current_level as usize] += 1;
+
+					position_in_window += 1;
+
+					if position_in_window >= histograms_size {
+						window += 1;
+						position_in_window = 0;
+					}
+				},
+			}
+		}
+
+
+
+
+
+		Ok(SoundDescriptor::from_histogram(context.gen_id(String::from("snd")), histograms_size, histograms_levels, histograms))
+	}
+
+	pub fn from_raw_file(context: &mut ContextObject, sound_file: File) -> Result<SoundDescriptor, String> {
 		let histograms_size;
 		let histograms_levels;
 		match context.get_param("window_size") {
@@ -44,7 +168,7 @@ impl SoundDescriptor {
 			}
 		};
 
-		let mut file_reader = BufReader::new(&image_file);
+		let mut file_reader = BufReader::new(&sound_file);
 		let mut little_endian = true;
 
 		{

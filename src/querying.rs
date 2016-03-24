@@ -4,6 +4,9 @@ extern crate xml;
 extern crate stemmer;
 extern crate regex;
 extern crate time;
+extern crate image;
+extern crate hound;
+extern crate simplemad;
 
 pub mod includes;
 

@@ -2,12 +2,49 @@ use includes::image_types::*;
 
 use std::io::BufReader;
 use std::io::BufRead;
+
 use std::fs::File;
+use std::path::Path;
+
+use image;
+use image::Pixel;
+use image::GenericImage;
 
 use super::super::context_types::ContextObject;
 
 impl ImageDescriptor {
-	pub fn from_image_file(context: &mut ContextObject, image_file: File) -> Result<ImageDescriptor, String> {
+	pub fn from_image_file(context: &mut ContextObject, image_filename: &str) -> Result<ImageDescriptor, String> {
+
+
+		let mut pixels_amount = 0;
+		let mut histogram: [i32; IMAGE_QUANT_LVL] = [0; IMAGE_QUANT_LVL];
+
+
+		let img = image::open(&Path::new(image_filename)).unwrap();
+
+		for (_x, _y, pixel) in img.pixels() {
+			pixels_amount += 1;
+			// let (r_int, g_int, b_int) = match pixel {
+			// image::color::Rgba | image::color::Rgb => {
+			// (pixel.data[0], pixel.data[1], pixel.data[2])
+			// }
+			// image::color::Luma => (pixel.data[0], pixel.data[0], pixel.data[0]),
+			// _ => (0, 0, 0),
+			//
+			// };
+			let pixel = pixel.to_rgb();
+			match quantification_image(pixel.data[0] as u32, pixel.data[1] as u32, pixel.data[2] as u32) {
+				Ok(quantification) => {
+					histogram[quantification as usize] += 1;
+					pixels_amount += 1;
+				},
+				Err(e) => panic!(e),
+			}
+		}
+
+		Ok(ImageDescriptor::from_histogram(context.gen_id(String::from("img")), pixels_amount, histogram))
+	}
+	pub fn from_plain_text_file(context: &mut ContextObject, image_file: File) -> Result<ImageDescriptor, String> {
 		let l_int;
 		let h_int;
 		let nbcomp_int;
@@ -73,7 +110,10 @@ impl ImageDescriptor {
 				}
 			}
 
-			for (cpt_int, ((r_str, g_str), b_str)) in r_values.split_whitespace().zip(g_values.split_whitespace()).zip(b_values.split_whitespace()).enumerate() {
+			for (cpt_int, ((r_str, g_str), b_str)) in r_values.split_whitespace()
+			                                                  .zip(g_values.split_whitespace())
+			                                                  .zip(b_values.split_whitespace())
+			                                                  .enumerate() {
 				if cpt_int > l_int * h_int {
 					break;
 				}

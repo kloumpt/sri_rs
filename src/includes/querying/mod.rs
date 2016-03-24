@@ -10,6 +10,7 @@ use std::io::Write;
 use includes::image_types::ImageDescriptor;
 use includes::sound_types::SoundDescriptor;
 use includes::text_types::TextDescriptor;
+use includes::Descriptor;
 
 use includes::context_types::ContextObject;
 
@@ -42,17 +43,14 @@ impl ContextObject {
 								None => String::from("example"),
 							};
 
-							match query_type.as_ref() {
+							let descriptor = match query_type.as_ref() {
 								"example" => {
-									match query_text.rsplit('.').next().unwrap() {
-										"txt" | "TXT" => {
-											// Image file
-											println!("Searching a picture similar to {}", query_text);
-
-											let descriptor = match File::open(query_text.clone()) {
+									match query_text.rsplit('.').next().unwrap().to_string().to_lowercase().as_ref() {
+										"txt" => {
+											match File::open(query_text.clone()) {
 												Ok(image_file) => {
-													match ImageDescriptor::from_image_file(self, image_file) {
-														Ok(descriptor) => Some(descriptor),
+													match ImageDescriptor::from_plain_text_file(self, image_file) {
+														Ok(descriptor) => Some(Descriptor::ImageDescriptor(descriptor)),
 														Err(e) => {
 															println!("{:?}", e);
 															None
@@ -63,27 +61,22 @@ impl ContextObject {
 													println!("{} {}", e, query);
 													None
 												},
-											};
-
-
-											match descriptor {
-												Some(descriptor) => {
-													for descriptor_from_index in self.get_images_base() {
-														writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
-
-													}
-												},
-												None => println!("Error: can't create a descriptor for the given file ({})", query_text),
 											}
 										},
-										"bin" | "BIN" => {
-											// Sound file
-											println!("Searching a sound similar to {}", query_text);
-
-											let descriptor = match File::open(query_text.clone()) {
+										"png" | "jpg" | "jpeg" | "gif" | "bmp" | "ico" | "tiff" | "webp" => {
+											match ImageDescriptor::from_image_file(self, query_text.as_ref()) {
+												Ok(descriptor) => Some(Descriptor::ImageDescriptor(descriptor)),
+												Err(e) => {
+													println!("{:?}", e);
+													None
+												},
+											}
+										},
+										"bin" => {
+											match File::open(query_text.clone()) {
 												Ok(image_file) => {
-													match SoundDescriptor::from_sound_file(self, image_file) {
-														Ok(descriptor) => Some(descriptor),
+													match SoundDescriptor::from_raw_file(self, image_file) {
+														Ok(descriptor) => Some(Descriptor::SoundDescriptor(descriptor)),
 														Err(e) => {
 															println!("{:?}", e);
 															None
@@ -94,25 +87,47 @@ impl ContextObject {
 													println!("{} {}", e, query);
 													None
 												},
-											};
-
-											match descriptor {
-												Some(descriptor) => {
-													for descriptor_from_index in self.get_sounds_base() {
-														writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
-													}
-												},
-												None => println!("Error: can't create a descriptor for the given file ({})", query_text),
 											}
 										},
-										"xml" | "XML" => {
-											// Text file
-											println!("Searching a text similar to {}", query_text);
-
-											let descriptor = match File::open(query_text.clone()) {
+										"wav" => {
+											match File::open(query_text.clone()) {
+												Ok(image_file) => {
+													match SoundDescriptor::from_wav_file(self, image_file) {
+														Ok(descriptor) => Some(Descriptor::SoundDescriptor(descriptor)),
+														Err(e) => {
+															println!("{:?}", e);
+															None
+														},
+													}
+												},
+												Err(e) => {
+													println!("{} {}", e, query);
+													None
+												},
+											}
+										},
+										"mp3" | "MPEG3" => {
+											match File::open(query_text.clone()) {
+												Ok(image_file) => {
+													match SoundDescriptor::from_raw_file(self, image_file) {
+														Ok(descriptor) => Some(Descriptor::SoundDescriptor(descriptor)),
+														Err(e) => {
+															println!("{:?}", e);
+															None
+														},
+													}
+												},
+												Err(e) => {
+													println!("{} {}", e, query);
+													None
+												},
+											}
+										},
+										"xml" => {
+											match File::open(query_text.clone()) {
 												Ok(image_file) => {
 													match TextDescriptor::from_text_file(self, image_file) {
-														Ok(descriptor) => Some(descriptor),
+														Ok(descriptor) => Some(Descriptor::TextDescriptor(descriptor)),
 														Err(e) => {
 															println!("{:?}", e);
 															None
@@ -123,74 +138,75 @@ impl ContextObject {
 													println!("{} {}", e, query);
 													None
 												},
-											};
-
-											match descriptor {
-												Some(descriptor) => {
-													for descriptor_from_index in self.get_texts_base() {
-														writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
-
-													}
-												},
-												None => println!("Error: can't create a descriptor for the given file ({})", query_text),
 											}
 										},
-										_ => println!("Error: invalid file extension for query {}", query_id),
+										_ => {
+											println!("Error: invalid file extension for query {}", query_id);
+											None
+										},
+
 									}
 								},
 								"criterion" => {
 									let media_type = fields.next().unwrap();
 									match media_type {
 										"img" => {
-											// Image file
-											println!("Searching an image using the following color : {}", query_text);
-
-											let descriptor = match ImageDescriptor::from_criterions(self, query_text) {
-												Ok(descriptor) => Some(descriptor),
+											match ImageDescriptor::from_criteria(self, query_text) {
+												Ok(descriptor) => Some(Descriptor::ImageDescriptor(descriptor)),
 												Err(e) => {
 													println!("{:?}", e);
 													None
 												},
-											};
-
-											match descriptor {
-												Some(descriptor) => {
-													for descriptor_from_index in self.get_images_base() {
-														writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
-													}
-												},
-												None => println!("Error: can't create a descriptor for the given criterions ({})", query_text),
 											}
-
-
 										},
 										"txt" => {
-											// Text file
-											println!("Searching an image containing the following words : {}", query_text);
-
-
-											let descriptor = match TextDescriptor::from_criterions(self, query_text) {
-												Ok(descriptor) => Some(descriptor),
+											match TextDescriptor::from_criteria(self, query_text) {
+												Ok(descriptor) => Some(Descriptor::TextDescriptor(descriptor)),
 												Err(e) => {
 													println!("{:?}", e);
 													None
 												},
-											};
-
-											match descriptor {
-												Some(descriptor) => {
-													for descriptor_from_index in self.get_texts_base() {
-														writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
-
-													}
-												},
-												None => println!("Error: can't create a descriptor for the given criterions ({})", query_text),
 											}
 										},
-										_ => println!("Error, invalid media type : {} for query {}", media_type, query_id),
+										_ => {
+											println!("Error, invalid media type : {} for query {}", media_type, query_id);
+											None
+										},
 									}
 								},
-								_ => println!("Error, invalid query type : {} for query {}", query_type, query_id),
+								_ => {
+									println!("Error, invalid query type : {} for query {}", query_type, query_id);
+									None
+								},
+							};
+
+
+							match descriptor {
+								Some(descriptor) => {
+									match descriptor {
+										Descriptor::ImageDescriptor(descriptor) => {
+											println!("Searching a picture similar to {}", query_text);
+											for descriptor_from_index in self.get_images_base() {
+												writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
+
+											}
+										},
+										Descriptor::SoundDescriptor(descriptor) => {
+											println!("Searching a sound similar to {}", query_text);
+											for descriptor_from_index in self.get_sounds_base() {
+												writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
+											}
+										},
+										Descriptor::TextDescriptor(descriptor) => {
+											println!("Searching a text similar to {}", query_text);
+											for descriptor_from_index in self.get_texts_base() {
+												writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
+
+											}
+										},
+									}
+								},
+								None => println!("Error: could not create descriptor for query {}", query_id),
 							}
 						},
 					}

@@ -3,12 +3,12 @@ use includes::image_types;
 use includes::context_types::ContextObject;
 
 impl ImageDescriptor {
-	pub fn from_criterions(context: &mut ContextObject, criterion_as_str: &str) -> Result<ImageDescriptor, String> {
+	pub fn from_criteria(context: &mut ContextObject, criteria_as_str: &str) -> Result<ImageDescriptor, String> {
 
 		let mut histogram: [i32; IMAGE_QUANT_LVL] = [0; IMAGE_QUANT_LVL];
 
 
-		let mut color_components = criterion_as_str.split_whitespace();
+		let mut color_components = criteria_as_str.split_whitespace();
 
 		let r_int = match color_components.next().unwrap().parse::<u32>() {
 			Ok(i) => i,
