@@ -35,8 +35,8 @@ impl ContextObject {
 								println!("Indexing image: {}", l);
 
 								match File::open(l.clone()) {
-									Ok(image_file) => {
-										match ImageDescriptor::from_plain_text_file(self, image_file) {
+									Ok(file) => {
+										match ImageDescriptor::from_plain_text_file(self, file) {
 											Ok(descriptor) => {
 												self.add_image_association(String::from(descriptor.get_id()), l);
 												self.add_image_descriptor(descriptor);
@@ -64,8 +64,8 @@ impl ContextObject {
 								println!("Indexing sound: {}", l);
 
 								match File::open(l.clone()) {
-									Ok(image_file) => {
-										match SoundDescriptor::from_raw_file(self, image_file) {
+									Ok(file) => {
+										match SoundDescriptor::from_raw_file(self, file) {
 											Ok(descriptor) => {
 												self.add_sound_association(String::from(descriptor.get_id()), l);
 												self.add_sound_descriptor(descriptor);
@@ -83,8 +83,8 @@ impl ContextObject {
 								println!("Indexing sound: {}", l);
 
 								match File::open(l.clone()) {
-									Ok(image_file) => {
-										match SoundDescriptor::from_wav_file(self, image_file) {
+									Ok(file) => {
+										match SoundDescriptor::from_wav_file(self, file) {
 											Ok(descriptor) => {
 												self.add_sound_association(String::from(descriptor.get_id()), l);
 												self.add_sound_descriptor(descriptor);
@@ -102,8 +102,8 @@ impl ContextObject {
 								println!("Indexing sound: {}", l);
 
 								match File::open(l.clone()) {
-									Ok(image_file) => {
-										match SoundDescriptor::from_mp3_file(self, image_file) {
+									Ok(file) => {
+										match SoundDescriptor::from_mp3_file(self, file) {
 											Ok(descriptor) => {
 												self.add_sound_association(String::from(descriptor.get_id()), l);
 												self.add_sound_descriptor(descriptor);
@@ -121,8 +121,27 @@ impl ContextObject {
 								println!("Indexing text: {}", l);
 
 								match File::open(l.clone()) {
-									Ok(image_file) => {
-										match TextDescriptor::from_text_file(self, image_file) {
+									Ok(file) => {
+										match TextDescriptor::from_text_file(self, file) {
+											Ok(descriptor) => {
+												self.add_text_association(String::from(descriptor.get_id()), l);
+												self.add_text_descriptor(descriptor);
+
+											},
+											Err(e) => println!("{:?}", e),
+										}
+									},
+									Err(e) => println!("{} {}", e, l),
+								}
+								()
+							},
+							"srt" => {
+								// Subrip file
+								println!("Indexing subtitle: {}", l);
+
+								match File::open(l.clone()) {
+									Ok(file) => {
+										match TextDescriptor::from_subrip_file(self, file) {
 											Ok(descriptor) => {
 												self.add_text_association(String::from(descriptor.get_id()), l);
 												self.add_text_descriptor(descriptor);

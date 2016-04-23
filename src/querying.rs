@@ -7,6 +7,7 @@ extern crate time;
 extern crate image;
 extern crate hound;
 extern crate simplemad;
+extern crate subrip;
 
 pub mod includes;
 

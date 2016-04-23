@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use std::io::BufReader;
 use std::fs::File;
-
+use subrip;
 
 use xml::reader::{EventReader, XmlEvent};
 
@@ -17,6 +17,27 @@ static STOP_WORDS: &'static [&'static str] = &["au", "aux", "avec", "ce", "ces",
 impl TextDescriptor {
 	pub fn from_text_file(context: &mut ContextObject, text_file: File) -> Result<TextDescriptor, String> {
 		let mut stemmer = Stemmer::new("french").unwrap();
+		let min_word_size;
+		let max_word_per_text;
+		match context.get_param("min_word_size") {
+			Some(value) => {
+				match value.parse::<usize>() {
+					Ok(i) => min_word_size = i,
+					Err(e) => return Err(String::from(format!("Invalid value for parameter min_word_size ({})", e))),
+				}
+			},
+			None => panic!("Can't find parameter 'min_word_size' in config"),
+		}
+
+		match context.get_param("max_word_per_text") {
+			Some(value) => {
+				match value.parse::<usize>() {
+					Ok(i) => max_word_per_text = i,
+					Err(e) => return Err(String::from(format!("Invalid value for parameter max_word_per_text ({})", e))),
+				}
+			},
+			None => panic!("Can't find parameter 'max_word_per_text' in config"),
+		}
 
 		let mut occurences: HashMap<String, i32> = HashMap::new();
 
@@ -34,9 +55,9 @@ impl TextDescriptor {
 			match e {
 				Ok(event) => {
 					match event {
-						XmlEvent::StartDocument {version, encoding, standalone} => {
-							if encoding.to_lowercase().contains("iso") {
-								println!("Warning : encoding not supported, trying to index anyway ({})", encoding);
+						XmlEvent::StartDocument {version: _version, encoding: document_encoding, standalone: _standalone} => {
+							if document_encoding.to_lowercase().contains("iso") {
+								println!("Warning : encoding not supported, trying to index anyway ({})", document_encoding);
 							}
 						},
 						XmlEvent::StartElement { name, .. } => {
@@ -52,7 +73,7 @@ impl TextDescriptor {
 						XmlEvent::Characters(phrase) => {
 							if in_phrase {
 								for word in clean_string(phrase.to_lowercase()).split_whitespace() {
-									if word.len() > SIZE_WORD_RM {
+									if word.len() > min_word_size {
 										let mut use_word = true;
 										for stop_word in STOP_WORDS {
 											if &word == stop_word {
@@ -86,7 +107,7 @@ impl TextDescriptor {
 		occurences = HashMap::new();
 
 		for (word, occurence) in values {
-			if word_in_descriptor < NB_TERM_MAX {
+			if word_in_descriptor < max_word_per_text {
 				occurences.insert(word, occurence);
 				word_filtered += occurence;
 				word_in_descriptor += 1;
@@ -96,6 +117,82 @@ impl TextDescriptor {
 			}
 		}
 
+
+		Ok(TextDescriptor::from_occurences(context.gen_id(String::from("txt")), word_in_file, word_filtered as usize, occurences))
+	}
+
+
+	pub fn from_subrip_file(context: &mut ContextObject, text_file: File) -> Result<TextDescriptor, String> {
+		let mut stemmer = Stemmer::new("french").unwrap();
+		let min_word_size;
+		let max_word_per_text;
+		match context.get_param("min_word_size") {
+			Some(value) => {
+				match value.parse::<usize>() {
+					Ok(i) => min_word_size = i,
+					Err(e) => return Err(String::from(format!("Invalid value for parameter min_word_size ({})", e))),
+				}
+			},
+			None => panic!("Can't find parameter 'min_word_size' in config"),
+		}
+
+		match context.get_param("max_word_per_text") {
+			Some(value) => {
+				match value.parse::<usize>() {
+					Ok(i) => max_word_per_text = i,
+					Err(e) => return Err(String::from(format!("Invalid value for parameter max_word_per_text ({})", e))),
+				}
+			},
+			None => panic!("Can't find parameter 'max_word_per_text' in config"),
+		}
+
+		let mut occurences: HashMap<String, i32> = HashMap::new();
+
+
+
+		let mut word_in_file = 0;
+		let mut word_filtered = 0;
+		let mut word_in_descriptor = 0;
+
+
+		let subtitles = subrip::from_file(&text_file);
+
+		for current_sequence in subtitles {
+			let phrase = current_sequence.lines();
+			for word in clean_string(phrase.to_lowercase()).split_whitespace() {
+				if word.len() > min_word_size {
+					let mut use_word = true;
+					for stop_word in STOP_WORDS {
+						if &word == stop_word {
+							use_word = false;
+							break;
+						}
+					}
+					if use_word {
+						let word_stemmed = stemmer.stem(word);
+						let word_occurence = occurences.entry(word_stemmed).or_insert(0);
+
+						*word_occurence += 1;
+					}
+				}
+				word_in_file += 1;
+			}
+		}
+
+		let mut values: Vec<(String, i32)> = occurences.into_iter().collect();
+		values.sort_by(|&(_, v_a), &(_, v_b)| v_b.cmp(&v_a));
+		occurences = HashMap::new();
+
+		for (word, occurence) in values {
+			if word_in_descriptor < max_word_per_text {
+				occurences.insert(word, occurence);
+				word_filtered += occurence;
+				word_in_descriptor += 1;
+
+			} else {
+				break;
+			}
+		}
 
 		Ok(TextDescriptor::from_occurences(context.gen_id(String::from("txt")), word_in_file, word_filtered as usize, occurences))
 	}
@@ -118,6 +215,8 @@ fn clean_string(value: String) -> String {
 	     .replace(":", " ")
 	     .replace("{", " ")
 	     .replace("}", " ")
+	     .replace("[", " ")
+	     .replace("]", " ")
 	     .replace("=", " ")
 	     .replace("_", " ")
 	     .replace("'", " ")

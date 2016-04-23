@@ -140,6 +140,23 @@ impl ContextObject {
 												},
 											}
 										},
+										"srt" => {
+											match File::open(query_text.clone()) {
+												Ok(image_file) => {
+													match TextDescriptor::from_subrip_file(self, image_file) {
+														Ok(descriptor) => Some(Descriptor::TextDescriptor(descriptor)),
+														Err(e) => {
+															println!("{:?}", e);
+															None
+														},
+													}
+												},
+												Err(e) => {
+													println!("{} {}", e, query);
+													None
+												},
+											}
+										},
 										_ => {
 											println!("Error: invalid file extension for query {}", query_id);
 											None
@@ -187,20 +204,20 @@ impl ContextObject {
 										Descriptor::ImageDescriptor(descriptor) => {
 											println!("Searching a picture similar to {}", query_text);
 											for descriptor_from_index in self.get_images_base() {
-												writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
+												writeln!(result_writer, "{} 0 {} 0 {} sri_rs", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
 
 											}
 										},
 										Descriptor::SoundDescriptor(descriptor) => {
 											println!("Searching a sound similar to {}", query_text);
 											for descriptor_from_index in self.get_sounds_base() {
-												writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
+												writeln!(result_writer, "{} 0 {} 0 {} sri_rs", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
 											}
 										},
 										Descriptor::TextDescriptor(descriptor) => {
 											println!("Searching a text similar to {}", query_text);
 											for descriptor_from_index in self.get_texts_base() {
-												writeln!(result_writer, "{} 0 {} 0 {} sri-pfr", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
+												writeln!(result_writer, "{} 0 {} 0 {} sri_rs", query_id, descriptor_from_index.get_id(), descriptor.compare_to(descriptor_from_index)).unwrap();
 
 											}
 										},

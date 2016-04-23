@@ -23,7 +23,6 @@ impl ImageDescriptor {
 		let img = image::open(&Path::new(image_filename)).unwrap();
 
 		for (_x, _y, pixel) in img.pixels() {
-			pixels_amount += 1;
 			// let (r_int, g_int, b_int) = match pixel {
 			// image::color::Rgba | image::color::Rgb => {
 			// (pixel.data[0], pixel.data[1], pixel.data[2])
@@ -110,10 +109,7 @@ impl ImageDescriptor {
 				}
 			}
 
-			for (cpt_int, ((r_str, g_str), b_str)) in r_values.split_whitespace()
-			                                                  .zip(g_values.split_whitespace())
-			                                                  .zip(b_values.split_whitespace())
-			                                                  .enumerate() {
+			for (cpt_int, ((r_str, g_str), b_str)) in r_values.split_whitespace().zip(g_values.split_whitespace()).zip(b_values.split_whitespace()).enumerate() {
 				if cpt_int > l_int * h_int {
 					break;
 				}

@@ -7,3 +7,5 @@ fn_args_paren_newline=false
 reorder_imports=true
 hard_tabs=truenormalise_comments=false
 match_block_trailing_comma=true
+write_mode="Overwrite"
+skip_children=false
