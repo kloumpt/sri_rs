@@ -20,12 +20,12 @@ impl ContextObject {
 
 		let queries_reader = match File::open(&queries_list_filename) {
 			Ok(query_file) => BufReader::new(query_file),
-			Err(_) => panic!("Error, could not open config file '{}'", queries_list_filename),
+			Err(_) => panic!("Error, could not open query file '{}'", queries_list_filename),
 		};
 
 		let mut result_writer = match File::create(&result_filename) {
 			Ok(result_file) => result_file,
-			Err(_) => panic!("Error, could not open result_file file '{}'", result_filename),
+			Err(_) => panic!("Error, could not create result_file file '{}'", result_filename),
 		};
 
 		for line in queries_reader.lines() {
